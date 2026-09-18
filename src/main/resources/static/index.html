@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Weather Forecast</title>
+
+</head>
+
+<body>
+
+    <h1>Weather Forecast</h1>
+
+    <input
+        type="text"
+        id="city"
+        placeholder="Enter city"
+    >
+
+    <button
+        id="weatherButton"
+        onclick="getWeather()"
+    >
+        Get Weather
+    </button>
+
+    <h2>Current Weather</h2>
+
+    <p>
+        Temperature:
+        <span id="temperature">-</span> °C
+    </p>
+
+    <p>
+        Humidity:
+        <span id="humidity">-</span> %
+    </p>
+
+    <h2>5-Day Forecast</h2>
+
+    <div id="forecast">
+        Enter a city to see the forecast.
+    </div>
+
+
+    <script>
+
+        async function getWeather() {
+
+            const cityInput =
+                document.getElementById("city");
+
+            const button =
+                document.getElementById("weatherButton");
+
+            const temperature =
+                document.getElementById("temperature");
+
+            const humidity =
+                document.getElementById("humidity");
+
+            const forecast =
+                document.getElementById("forecast");
+
+
+            const city =
+                cityInput.value.trim();
+
+
+            if (!city) {
+
+                alert("Please enter a city.");
+
+                return;
+            }
+
+
+            // Show loading status
+
+            button.disabled = true;
+            button.textContent = "Loading...";
+
+            forecast.textContent =
+                "Loading forecast...";
+
+
+            try {
+
+                // Step 1:
+                // Find latitude and longitude of the city
+
+                const geoUrl =
+                    "https://geocoding-api.open-meteo.com/v1/search"
+                    + "?name="
+                    + encodeURIComponent(city)
+                    + "&count=1"
+                    + "&language=en"
+                    + "&format=json";
+
+
+                const geoResponse =
+                    await fetch(geoUrl);
+
+
+                if (!geoResponse.ok) {
+
+                    throw new Error(
+                        "Unable to find city."
+                    );
+
+                }
+
+
+                const geoData =
+                    await geoResponse.json();
+
+
+                if (
+                    !geoData.results ||
+                    geoData.results.length === 0
+                ) {
+
+                    alert("City not found.");
+
+                    return;
+                }
+
+
+                const location =
+                    geoData.results[0];
+
+
+                // Step 2:
+                // Send coordinates to Spring Boot
+
+                const weatherUrl =
+                    "/api/weather"
+                    + "?latitude="
+                    + location.latitude
+                    + "&longitude="
+                    + location.longitude;
+
+
+                const weatherResponse =
+                    await fetch(weatherUrl);
+
+
+                if (!weatherResponse.ok) {
+
+                    throw new Error(
+                        "Unable to fetch weather data."
+                    );
+
+                }
+
+
+                // Step 3:
+                // Parse JSON response
+
+                const data =
+                    await weatherResponse.json();
+
+
+                // Step 4:
+                // Display current temperature
+
+                temperature.textContent =
+                    data.current.temperature;
+
+
+                // Step 5:
+                // Display humidity
+
+                humidity.textContent =
+                    data.current.humidity;
+
+
+                // Step 6:
+                // Display 5-day forecast
+
+                forecast.innerHTML = "";
+
+
+                for (let i = 0; i < 5; i++) {
+
+                    const item =
+                        document.createElement("p");
+
+
+                    item.textContent =
+                        data.daily.time[i]
+                        + " — "
+                        + data.daily.minTemperature[i]
+                        + "°C to "
+                        + data.daily.maxTemperature[i]
+                        + "°C";
+
+
+                    forecast.appendChild(item);
+
+                }
+
+
+            } catch (error) {
+
+                console.error(error);
+
+                forecast.textContent =
+                    "Unable to fetch weather data.";
+
+                alert(
+                    "Unable to fetch weather data."
+                );
+
+
+            } finally {
+
+                // Restore button
+
+                button.disabled = false;
+
+                button.textContent =
+                    "Get Weather";
+
+            }
+
+        }
+
+    </script>
+
+</body>
+
+</html>
